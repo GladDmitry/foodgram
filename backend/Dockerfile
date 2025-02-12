@@ -11,7 +11,7 @@ RUN groupadd -g 1001 yc-group && \
 
 COPY . .
 
-RUN chown -R yc-user:yc-user /app
+RUN chown -R yc-user:yc-group /app
 
 USER yc-user
 

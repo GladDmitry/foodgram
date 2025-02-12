@@ -6,7 +6,8 @@ COPY requirements.txt .
 
 RUN pip install -r requirements.txt --no-cache-dir
 
-RUN useradd -u 1000 -g 1001 yc-user
+RUN groupadd -g 1001 yc-group && \
+    useradd -u 1000 -g yc-group yc-user
 
 COPY . .
 

@@ -154,4 +154,4 @@ DJOSER = {
 }
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/var/www/foodgram/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

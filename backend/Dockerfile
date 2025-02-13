@@ -2,6 +2,8 @@ FROM python:3.9
 
 WORKDIR /app
 
+RUN echo "umask 0022" >> /etc/profile
+
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt --no-cache-dir

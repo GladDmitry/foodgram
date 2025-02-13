@@ -16,7 +16,7 @@ services:
     env_file: .env
     volumes:
       - static:/backend_static/
-      - ./media:/app/media/
+      - media:/var/www/foodgram/media/
 
   frontend:
     image: gladdo/foodgram_frontend
@@ -31,4 +31,4 @@ services:
       - 8000:80
     volumes:
       - static:/static/
-      - ./media:/var/www/foodgram/media/
+      - media:/var/www/foodgram/media/

@@ -68,4 +68,4 @@ sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/col
 * PostgreSQL
 
 # Автор
-[Гладилин Дмитрий Олегович]([https://путь/к/ссылке](https://github.com/GladDmitry))
+[Гладилин Дмитрий Олегович](https://github.com/GladDmitry)

@@ -133,8 +133,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet для работы с ингредиентами."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = IngredientFilter
+    filter_backends = [IngredientFilter]
     search_fields = ('^name',)
     pagination_class = None
 

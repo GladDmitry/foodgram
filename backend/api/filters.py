@@ -2,28 +2,19 @@ from django_filters import (
     BooleanFilter,
     FilterSet,
     ModelMultipleChoiceFilter,
+    SearchFilter
 )
 
 from recipes.models import (
-    Ingredient,
     Recipe,
     ShoppingCartRecipe,
     Tag,
 )
 
 
-#   Наследовать от SearchFilter не представляется возможным
-#   из-за проверки в Postman (там get запрос использует/?name=).
-class IngredientFilter(FilterSet):
+class IngredientFilter(SearchFilter):
     """Фильтр ингредиентов."""
     search_param = 'name'
-    lookup_prefixes = {
-        '^': 'istartswith',
-    }
-
-    class Meta:
-        model = Ingredient
-        fields = ('name',)
 
 
 class RecipeFilter(FilterSet):

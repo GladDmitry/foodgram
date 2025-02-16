@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import EmailValidator, RegexValidator
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
-from django.forms import ValidationError
+from django.db.models import Q
 
 from foodgram.constants import (
     EMAIL_LENGTH,
@@ -17,14 +17,7 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=USERNAME_LENGTH,
         unique=True,
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=('Имя пользователя может содержать '
-                         'только латинские буквы, цифры и символы: @ . + - _'
-                         )
-            )
-        ],
+        validators=[UnicodeUsernameValidator()],
         verbose_name='Имя пользователя',
     )
 
@@ -41,7 +34,6 @@ class User(AbstractUser):
     email = models.EmailField(
         max_length=EMAIL_LENGTH,
         unique=True,
-        validators=[EmailValidator()],
         verbose_name='Email'
     )
 
@@ -57,7 +49,6 @@ class User(AbstractUser):
         'username',
         'first_name',
         'last_name',
-        'password'
     )
 
     class Meta:
@@ -87,6 +78,10 @@ class Subscription(models.Model):
 
     class Meta:
         constraints = (
+            models.CheckConstraint(
+                check=~Q(user=models.F('author')),
+                name='prevent_self_subscription',
+            ),
             models.UniqueConstraint(
                 fields=['user', 'author'],
                 name='unique_user_author'
@@ -94,11 +89,6 @@ class Subscription(models.Model):
         )
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-
-    def save(self, *args, **kwargs):
-        if self.user == self.author:
-            raise ValidationError("Нельзя подписаться на самого себя.")
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.user.username} подписан(а) на {self.author.username}'

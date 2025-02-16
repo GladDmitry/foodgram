@@ -5,7 +5,7 @@ from .models import Subscription, User
 
 
 @admin.register(User)
-class CustomUserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin):
     """Админка пользователей."""
 
     list_display = (

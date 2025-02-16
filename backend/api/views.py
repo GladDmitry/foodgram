@@ -5,19 +5,13 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-
-from django_filters import CharFilter, FilterSet, ModelMultipleChoiceFilter
 from django_filters.rest_framework import DjangoFilterBackend
-
 from djoser.views import UserViewSet as DjoserViewSet
-
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from foodgram.constants import PAGINATION_PER_PAGE
 from recipes.models import (
     FavoriteRecipe,
     Ingredient,
@@ -28,11 +22,13 @@ from recipes.models import (
 )
 from users.models import Subscription, User
 
+from .filters import IngredientFilter, RecipeFilter
+from .paginations import LimitPagination
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     AvatarSerializer,
     CreateSubscriptionSerializer,
     CreateUpdateRecipeSerializer,
-    CreateUserSerializer,
     FavoriteRecipeSerializer,
     IngredientSerializer,
     RecipeSerializer,
@@ -43,74 +39,10 @@ from .serializers import (
 )
 
 
-class IsAuthorOrReadOnly(permissions.BasePermission):
-    """Пермишен: автор может редактировать, остальные только читать."""
-
-    def has_object_permission(self, request, view, obj):
-        return (
-            request.method in permissions.SAFE_METHODS
-            or obj.author == request.user
-        )
-
-
-class CustomPagination(PageNumberPagination):
-    """Кастомная пагинация."""
-
-    page_size = PAGINATION_PER_PAGE
-    page_size_query_param = 'limit'
-
-
-class IngredientFilter(FilterSet):
-    """Фильтр ингредиентов."""
-    name = CharFilter(lookup_expr='istartswith')
-
-    class Meta:
-        model = Ingredient
-        fields = ('name',)
-
-
-class RecipeFilter(FilterSet):
-    """Фильтр рецептов."""
-    tags = ModelMultipleChoiceFilter(
-        field_name='tags__slug',
-        queryset=Tag.objects.all(),
-        to_field_name='slug',
-    )
-    is_in_shopping_cart = CharFilter(
-        method='filter_user_recipes')
-    is_favorited = CharFilter(method='filter_user_recipes')
-
-    class Meta:
-        model = Recipe
-        fields = ('author', 'tags', 'is_favorited', 'is_in_shopping_cart')
-
-    def filter_user_recipes(self, queryset, name, value):
-        user = self.request.user
-        if user.is_anonymous:
-            return queryset.none()
-        filter_mapping = {
-            "is_favorited": "favorite_recipes__user",
-            "is_in_shopping_cart": "id__in"
-        }
-        if name == "is_in_shopping_cart":
-            related_recipes = ShoppingCartRecipe.objects.filter(
-                user=user
-            ).values_list('recipe', flat=True)
-            return (
-                queryset.filter(id__in=related_recipes) if value
-                else queryset
-            )
-        return (
-            queryset.filter(**{filter_mapping[name]: user}) if value
-            else queryset
-        )
-
-
 class UserViewSet(DjoserViewSet):
     """ViewSet для работы с пользователями."""
     queryset = User.objects.all()
-    serializer_class = CreateUserSerializer
-    pagination_class = CustomPagination
+    pagination_class = LimitPagination
 
     def get_serializer_class(self):
         if self.action in {'list', 'retrieve', 'me'}:
@@ -122,7 +54,7 @@ class UserViewSet(DjoserViewSet):
         url_path='me', url_name='me'
     )
     def me(self, request):
-        return Response(self.get_serializer(request.user).data)
+        return super().me(request)
 
     @action(
         detail=False, methods=['put', 'delete'],
@@ -134,7 +66,6 @@ class UserViewSet(DjoserViewSet):
         if request.method == 'DELETE':
             user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)
-
         serializer = AvatarSerializer(user, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -148,7 +79,6 @@ class UserViewSet(DjoserViewSet):
     def subscribe(self, request, id):
         user = request.user
         author = get_object_or_404(User, id=id)
-
         if request.method == 'POST':
             serializer = CreateSubscriptionSerializer(
                 data={'user': user.id, 'author': author.id},
@@ -157,7 +87,6 @@ class UserViewSet(DjoserViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save(user=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
         deleted, _ = Subscription.objects.filter(
             user=user,
             author=author
@@ -176,9 +105,8 @@ class UserViewSet(DjoserViewSet):
     def get_subscriptions(self, request):
         user = request.user
         subscribes = User.objects.filter(subscribers__user=user)
-        paginator = CustomPagination()
+        paginator = LimitPagination()
         page = paginator.paginate_queryset(subscribes, request)
-
         if page is not None:
             serializer = SubscriptionSerializer(
                 page,
@@ -186,7 +114,6 @@ class UserViewSet(DjoserViewSet):
                 context={'request': request}
             )
             return paginator.get_paginated_response(serializer.data)
-
         serializer = SubscriptionSerializer(
             subscribes,
             many=True,
@@ -216,7 +143,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с рецептами."""
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthorOrReadOnly,)
-    pagination_class = CustomPagination
+    pagination_class = LimitPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
 

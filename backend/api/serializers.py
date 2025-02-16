@@ -1,9 +1,7 @@
-from django.contrib.auth.password_validation import validate_password
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.exceptions import NotAuthenticated
 
-from foodgram.constants import PASSWORD_LENGTH
 from recipes.models import (
     FavoriteRecipe,
     Ingredient,
@@ -38,41 +36,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, author):
         user = self.context.get('request').user
-        return (
-            user.is_authenticated
-            and user.subscription.filter(author=author).exists()
-        )
-
-
-class CreateUserSerializer(serializers.ModelSerializer):
-    """Сериализатор регистрации пользователя."""
-
-    password = serializers.CharField(
-        min_length=PASSWORD_LENGTH,
-        write_only=True
-    )
-
-    class Meta:
-        model = User
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'password'
-        )
-
-    def validate_password(self, value):
-        validate_password(value)
-        return value
-
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = super().create(validated_data)
-        user.set_password(password)
-        user.save()
-        return user
+        if not user.is_authenticated:
+            return False
+        return user.subscription.filter(author=author).exists()
 
 
 class AvatarSerializer(serializers.ModelSerializer):

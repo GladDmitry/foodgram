@@ -1,6 +1,5 @@
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.forms import ValidationError
 
 from foodgram.constants import (
     INGREDIENT_NAME_LENGTH,
@@ -88,7 +87,7 @@ class Recipe(models.Model):
         through='RecipeTag',
         verbose_name='Теги'
     )
-    cooking_time = models.PositiveIntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(MIN_COOKING_TIME)
         ],
@@ -188,15 +187,12 @@ class AbstractFavoriteShoppingCart(models.Model):
 
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        if self.__class__.objects.filter(
-            user=self.user,
-            recipe=self.recipe
-        ).exists():
-            raise ValidationError('Этот рецепт уже добавлен.')
-
-        super().save(*args, **kwargs)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='%(app_label)s_%(class)s_unique_user_recipe'
+            ),
+        ]
 
 
 class FavoriteRecipe(AbstractFavoriteShoppingCart):

@@ -1,9 +1,9 @@
 from django_filters import (
-    BooleanFilter,
     FilterSet,
+    NumberFilter,
     ModelMultipleChoiceFilter,
-    SearchFilter
 )
+from rest_framework.filters import SearchFilter
 
 from recipes.models import (
     Recipe,
@@ -16,6 +16,11 @@ class IngredientFilter(SearchFilter):
     """Фильтр ингредиентов."""
     search_param = 'name'
 
+#   BooleanFilter не работает.
+#   is_favorited и is_in_shopping_cart передаются в запросе как строки:
+#   (?is_favorited=1) и (?is_in_shopping_cart=1).
+#   Заменил на NumberFilter.
+
 
 class RecipeFilter(FilterSet):
     """Фильтр рецептов."""
@@ -24,9 +29,9 @@ class RecipeFilter(FilterSet):
         queryset=Tag.objects.all(),
         to_field_name='slug',
     )
-    is_in_shopping_cart = BooleanFilter(
+    is_in_shopping_cart = NumberFilter(
         method='filter_user_recipes')
-    is_favorited = BooleanFilter(method='filter_user_recipes')
+    is_favorited = NumberFilter(method='filter_user_recipes')
 
     class Meta:
         model = Recipe
